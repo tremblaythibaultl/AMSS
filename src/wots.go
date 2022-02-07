@@ -43,8 +43,10 @@ func sk_init() {
 
 func pk_init() {
 	for i := 0; i < t; i++ {
+		key := signature_key[i]
 		for j := 0; j < int(math.Pow(2, w)-1); j++ {
-			public_key[i] = sha256.Sum256(signature_key[i][:])
+			key = sha256.Sum256(key[:])
 		}
+		public_key[i] = key
 	}
 }
