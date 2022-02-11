@@ -15,19 +15,23 @@ Winternitz one-time signature scheme parameters
 const n = 32 // Size (in bytes) of the message to sign
 const w = 16 // Winternitz parameter
 const t = 18 // computed in function of n and w
-var signature_key [t][n]byte
-var public_key [t][n]byte
-var signature [t][n]byte
 
-func main() {
-	sk_init()
-	pk_init()
-	sign(sha256.Sum256([]byte("gm!")))
-	verify(sha256.Sum256([]byte("gm!")), signature)
+type oneTimeSig struct {
+	signatureKey [t][n]byte
+	publicKey    [t][n]byte
+	signature    [t][n]byte
+}
+
+func newWots() *oneTimeSig {
+	wots := oneTimeSig{}
+	skInit(&wots)
+	pkInit(&wots)
+
+	return &wots
 }
 
 // Initializes the OTS secret (signature) key with t n-byte random strings
-func sk_init() {
+func skInit(wots *oneTimeSig) {
 	rand.Seed(time.Now().UnixNano())
 	var rvalue uint64
 
@@ -37,20 +41,20 @@ func sk_init() {
 			b := make([]byte, 8)
 			binary.BigEndian.PutUint64(b, rvalue)
 			for k := 0; k < 8; k++ {
-				signature_key[i][j+k] = b[k]
+				wots.signatureKey[i][j+k] = b[k]
 			}
 		}
 	}
 }
 
 // Initializes the OTS public key from the signature key
-func pk_init() {
+func pkInit(wots *oneTimeSig) {
 	for i := 0; i < t; i++ {
-		key := signature_key[i]
+		key := wots.signatureKey[i]
 		for j := 0; j < int(math.Pow(2, w)-1); j++ {
 			key = sha256.Sum256(key[:])
 		}
-		public_key[i] = key
+		wots.publicKey[i] = key
 	}
 }
 
@@ -75,30 +79,28 @@ func compute_bit_strings(digest [32]byte) [t]uint16 {
 }
 
 // Signs a message digest of 256 bits
-func sign(digest [32]byte) {
+func sign(wots *oneTimeSig, digest [32]byte) {
 	var bit_strings = compute_bit_strings(digest)
 
-	//fmt.Println(checksum)
-
 	for i := 0; i < t; i++ {
-		sig := signature_key[i]
+		sig := wots.signatureKey[i]
 		for j := uint16(0); j < bit_strings[i]; j++ {
 			sig = sha256.Sum256(sig[:])
 		}
-		signature[i] = sig
+		wots.signature[i] = sig
 	}
 }
 
-func verify(digest [32]byte, sig [t][n]byte) {
+func verify(wots *oneTimeSig, digest [32]byte) {
 	var bit_strings = compute_bit_strings(digest)
 
 	for i := 0; i < t; i++ {
-		verif := sig[i]
+		verif := wots.signature[i]
 		for j := uint32(0); j < uint32(math.Pow(2, w))-1-uint32(bit_strings[i]); j++ {
 			verif = sha256.Sum256(verif[:])
 		}
 		for j := 0; j < len(verif); j++ {
-			if verif[j] != public_key[i][j] {
+			if verif[j] != wots.publicKey[i][j] {
 				fmt.Println("Invalid signature")
 				// TODO : handle invalid signatures
 			}
