@@ -30,15 +30,13 @@ type mssSignature struct {
 }
 
 func main() {
-	d := sha256.Sum256([]byte("GM!"))
-
 	//OTS := newWots()
-	//signature := wotsSign(OTS, d)
+	//signature :=
 	//WotsVerify(signature, OTS.publicKey, d)
+}
 
-	merkleTree := newMSS()
-	signature := sign(merkleTree, d)
-	verify(signature, merkleTree.hashTree[len(merkleTree.hashTree)-2], d)
+func (sigTree *merkleSigTree) GetPublicKey() []byte {
+	return sigTree.hashTree[2*nbMessages-2][:]
 }
 
 func newMSS() *merkleSigTree {
@@ -88,7 +86,6 @@ func sign(tree *merkleSigTree, digest [n]byte) *mssSignature {
 	}
 
 	signature.otsPublicKey = tree.leaves[tree.traversalIndex].publicKey
-
 	// compute authentication path, which is the sequence of
 	// sibling nodes of the nodes in the path from the leaf to the root
 	for i := 0; i < height; i++ {
@@ -111,22 +108,24 @@ func sign(tree *merkleSigTree, digest [n]byte) *mssSignature {
 	return &signature
 }
 
-func verify(signature *mssSignature, mssPublicKey [n]byte, digest [n]byte) {
-	WotsVerify(signature.otsSignature, signature.otsPublicKey, digest)
+func verify(signature *mssSignature, mssPublicKey [n]byte, digest [n]byte) bool {
+	wotsVerify(signature.otsSignature, signature.otsPublicKey, digest)
 
 	// verify authenticity of the OTS public key by computing the root hash from the auth path
 	// at the end of the loop, authPathHash is the hash tree root of the signer, which is also its public key
 	authPathHash := hashWotsPublicKey(signature.otsPublicKey)
-	for i := 1; i <= height; i++ {
+	for i := 0; i < height; i++ {
 		if int(math.Floor(float64(signature.index)/math.Pow(2, float64(i))))%2 == 0 {
-			authPathHash = sha256.Sum256(append(authPathHash[:], signature.authPath[i-1][:]...))
+			authPathHash = sha256.Sum256(append(authPathHash[:], signature.authPath[i][:]...))
 		} else {
-			authPathHash = sha256.Sum256(append(signature.authPath[i-1][:], authPathHash[:]...))
+			authPathHash = sha256.Sum256(append(signature.authPath[i][:], authPathHash[:]...))
 		}
 	}
 
 	if authPathHash != mssPublicKey {
-		fmt.Println("Invalid MSS signature!")
-		// TODO : handle invalid signature
+		return false
+		fmt.Println("Invalid MSS signature")
 	}
+
+	return true
 }

@@ -9,9 +9,8 @@ import (
 	"time"
 )
 
-/**
-Winternitz one-time signature scheme parameters
-*/
+// Winternitz one-time signature scheme parameters
+
 const n = 32 // Size (in bytes) of the message to sign
 const w = 16 // Winternitz parameter
 const t = 18 // computed in function of n and w
@@ -92,7 +91,7 @@ func wotsSign(wots *oneTimeSig, digest [n]byte) [t][n]byte {
 	return signature
 }
 
-func WotsVerify(signature [t][n]byte, publicKey [t][n]byte, digest [n]byte) {
+func wotsVerify(signature [t][n]byte, publicKey [t][n]byte, digest [n]byte) {
 	var bitStrings = computeBitStrings(digest)
 	error := false
 	for i := 0; i < t; i++ {
@@ -107,7 +106,7 @@ func WotsVerify(signature [t][n]byte, publicKey [t][n]byte, digest [n]byte) {
 			}
 		}
 		if error {
-			fmt.Printf("Invalid WOTS signature : \nwots verification=%x\npublic key=%x\n", verif, publicKey[i])
+			fmt.Printf("Invalid WOTS signature : \nwots verification=\n%x\npublic key=\n%x\n", verif, publicKey[i])
 		}
 	}
 }
